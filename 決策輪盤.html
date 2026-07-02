@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>決策輪盤</title>
+<style>
+  :root{
+    --ink:#2B2620; --paper:#EDE3CC; --paper-dark:#E1D3B0; --stamp:#C1443C;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+    background:radial-gradient(ellipse at top, var(--paper-dark), var(--paper));
+    color:var(--ink);
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:26px 18px 60px;}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:10px;}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;opacity:.6;margin:0 0 2px;}
+  h1{font-family:Georgia,"Noto Serif TC",serif;font-size:21px;font-weight:800;margin:0;}
+  .btn-edit{display:flex;gap:6px;align-items:center;font-size:13px;padding:7px 13px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;white-space:nowrap;}
+  .btn-edit.active{background:var(--ink);color:var(--paper);}
+  .picker{position:relative;margin-bottom:16px;}
+  .picker-btn{width:100%;display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-radius:14px;border:2px solid var(--ink);background:var(--paper);font-size:14px;cursor:pointer;}
+  .picker-list{position:absolute;z-index:30;margin-top:4px;width:100%;border-radius:14px;border:2px solid var(--ink);overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.15);background:var(--paper);}
+  .picker-row{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;font-size:14px;cursor:pointer;}
+  .picker-row.active{background:var(--paper-dark);}
+  .picker-add{width:100%;display:flex;align-items:center;gap:6px;padding:11px 16px;font-size:14px;border:none;background:none;border-top:1px solid var(--paper-dark);cursor:pointer;color:var(--ink);}
+  .sym{opacity:.55;font-size:14px;}
+  .edit-panel{margin-bottom:20px;border-radius:18px;border:2px solid var(--ink);padding:16px;background:rgba(255,255,255,.4);display:flex;flex-direction:column;gap:14px;}
+  .scenario-name-row{display:flex;align-items:center;gap:6px;font-family:Georgia,"Noto Serif TC",serif;font-size:18px;font-weight:800;cursor:pointer;}
+  .scenario-name-input{width:100%;padding:7px 10px;border-radius:8px;border:1.5px solid var(--ink);font-family:Georgia,"Noto Serif TC",serif;font-size:17px;background:var(--paper);}
+  .cat-card{border-radius:14px;padding:11px;border:1.5px solid; background:rgba(255,255,255,.55);}
+  .cat-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .swatch-row{display:flex;gap:4px;}
+  .swatch{width:16px;height:16px;border-radius:999px;border:2px solid transparent;cursor:pointer;}
+  .cat-name-input{flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1.5px solid;font-size:14px;font-weight:600;background:var(--paper);}
+  .icon-btn{border:none;background:none;cursor:pointer;opacity:.6;font-size:15px;padding:2px;}
+  .icon-btn:hover{opacity:1;}
+  .item-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:5px 10px;border-radius:999px;color:var(--paper);margin:0 4px 4px 0;}
+  .item-chip .x{cursor:pointer;opacity:.85;}
+  .adder{display:flex;gap:6px;margin-top:4px;}
+  .adder input{flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1.5px solid;font-size:12px;}
+  .adder button{padding:0 10px;border-radius:8px;border:none;font-weight:800;font-size:14px;cursor:pointer;color:var(--paper);}
+  .add-cat-btn{width:100%;display:flex;justify-content:center;align-items:center;gap:6px;padding:10px;border-radius:14px;border:2px dashed var(--ink);background:none;font-size:14px;cursor:pointer;color:var(--ink);}
+  .flow{display:flex;flex-direction:column;align-items:center;}
+  .flow-note{font-size:13px;opacity:.7;margin-bottom:14px;}
+  .wheel-box{position:relative;width:270px;height:270px;}
+  .pointer{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:26px solid var(--stamp);filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));z-index:20;}
+  .disc{position:absolute;inset:0;border-radius:999px;border:6px solid var(--ink);box-shadow:0 8px 30px rgba(43,38,32,.45);}
+  .disc-label{position:absolute;top:50%;left:50%;width:0;height:0;}
+  .disc-label span{position:absolute;text-align:center;color:var(--paper);font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.4);line-height:1.2;display:inline-block;}
+  .pin{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:999px;background:var(--stamp);border:3px solid var(--paper);z-index:10;}
+  .spin-btn{margin-top:22px;padding:12px 30px;border-radius:999px;border:none;font-weight:800;font-size:15px;color:var(--paper);cursor:pointer;display:flex;align-items:center;gap:8px;}
+  .spin-btn:disabled{opacity:.5;cursor:default;}
+  .link-btn{margin-top:12px;font-size:12px;text-decoration:underline;opacity:.6;background:none;border:none;cursor:pointer;color:var(--ink);}
+  .empty-note{font-size:13px;opacity:.6;padding:40px 0;text-align:center;}
+  .result-card{border-radius:18px;padding:32px 40px;text-align:center;border:4px solid;background:var(--paper);box-shadow:0 8px 24px rgba(0,0,0,.18);animation:fadeIn .4s ease;}
+  .result-eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;opacity:.6;margin:0 0 4px;}
+  .result-text{font-family:Georgia,"Noto Serif TC",serif;font-size:28px;font-weight:900;margin:0;}
+  .again-btn{margin-top:22px;display:flex;align-items:center;gap:8px;padding:11px 24px;border-radius:999px;border:none;font-weight:800;background:var(--ink);color:var(--paper);cursor:pointer;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .history-section{margin-top:36px;}
+  .history-title{font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.5;margin-bottom:8px;}
+  .history-chip{font-size:12px;padding:5px 10px;border-radius:999px;border:1.5px solid var(--ink);margin:0 6px 6px 0;display:inline-block;}
+  .io-bar{display:flex;gap:10px;margin-top:26px;padding-top:16px;border-top:1.5px dashed var(--paper-dark);}
+  .io-btn{flex:1;padding:10px;border-radius:12px;border:1.5px solid var(--ink);background:transparent;font-size:13px;cursor:pointer;color:var(--ink);}
+  .toast{margin-top:12px;font-size:12px;text-align:center;color:var(--stamp);}
+  .toast.ok{color:#4A6B5A;}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+<input type="file" id="import-input" accept="application/json" style="display:none" />
+
+<script>
+/* ---------- 資料層：localStorage 儲存，離線可用 ---------- */
+const STORAGE_KEY = "roulette-data-local-v1";
+const COLOR_POOL = ["#C1443C","#D9A441","#4A6B5A","#35566B","#8A5A34","#6B4A7A","#B5652C","#3E7C6B"];
+const uid = () => Math.random().toString(36).slice(2,10);
+
+function defaultData(){
+  return {
+    activeScenarioId: "s1",
+    scenarios: [
+      { id:"s1", name:"日常決定", categories:[
+        { id:uid(), name:"食", color:COLOR_POOL[0], items:["牛肉麵","滷肉飯","火鍋","日式定食","義大利麵"] },
+        { id:uid(), name:"衣", color:COLOR_POOL[1], items:["極簡風","休閒運動","正式襯衫"] },
+        { id:uid(), name:"住", color:COLOR_POOL[2], items:["打掃房間","整理書桌","換床單"] },
+        { id:uid(), name:"行", color:COLOR_POOL[3], items:["騎車兜風","散步","搭捷運探索新地方"] },
+        { id:uid(), name:"育", color:COLOR_POOL[4], items:["讀一本書","線上課程","練習語言"] },
+        { id:uid(), name:"樂", color:COLOR_POOL[5], items:["看電影","打電動","聽音樂"] },
+      ]},
+      { id:"s2", name:"跟小孩的學習方案", categories:[
+        { id:uid(), name:"玩遊戲", color:COLOR_POOL[3], items:["積木","桌遊","捉迷藏","拼圖"] },
+        { id:uid(), name:"學習", color:COLOR_POOL[1], items:["英文單字","數學","畫畫","讀繪本"] },
+      ]},
+    ],
+    history: {},
+  };
+}
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ /* fall through to default */ }
+  return defaultData();
+}
+function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){
+    ui.toast = { type:"err", msg:"儲存失敗，可能是本機空間不足" };
+  }
+}
+
+let state = loadData();
+let ui = {
+  phase:"category", chosenCatId:null, chosenItem:null,
+  catRotation:0, itemRotation:0, catSpinning:false, itemSpinning:false,
+  pendingCatIdx:null, pendingItemIdx:null,
+  editing:false, editingScenarioName:false, scenarioPickerOpen:false,
+  toast:null,
+};
+
+function getScenario(){
+  return state.scenarios.find(s=>s.id===state.activeScenarioId) || state.scenarios[0];
+}
+function getCategories(){ return getScenario().categories; }
+function getChosenCat(){
+  const cats = getCategories();
+  return cats.find(c=>c.id===ui.chosenCatId) || null;
+}
+
+/* ---------- 場景/模板操作 ---------- */
+function updateScenario(fn){
+  const s = getScenario();
+  const idx = state.scenarios.findIndex(x=>x.id===s.id);
+  state.scenarios[idx] = fn(s);
+  saveData();
+}
+function resetFlow(){
+  ui.phase="category"; ui.chosenCatId=null; ui.chosenItem=null;
+  ui.pendingCatIdx=null; ui.pendingItemIdx=null;
+}
+function addScenario(){
+  const ns = { id:uid(), name:"新模板", categories:[] };
+  state.scenarios.push(ns);
+  state.activeScenarioId = ns.id;
+  saveData(); resetFlow(); render();
+}
+function deleteScenario(id){
+  if(state.scenarios.length<=1) return;
+  state.scenarios = state.scenarios.filter(s=>s.id!==id);
+  state.activeScenarioId = state.scenarios[0].id;
+  saveData(); resetFlow(); render();
+}
+function renameScenario(name){ updateScenario(s=>({...s,name:name||s.name})); }
+function addCategory(){
+  const cats = getCategories();
+  const color = COLOR_POOL[cats.length % COLOR_POOL.length];
+  updateScenario(s=>({...s, categories:[...s.categories, {id:uid(), name:"新類別", color, items:[]}]}));
+  render();
+}
+function removeCategory(cid){
+  updateScenario(s=>({...s, categories:s.categories.filter(c=>c.id!==cid)}));
+  render();
+}
+function renameCategory(cid,name){
+  updateScenario(s=>({...s, categories:s.categories.map(c=>c.id===cid?{...c,name:name||c.name}:c)}));
+}
+function recolorCategory(cid,color){
+  updateScenario(s=>({...s, categories:s.categories.map(c=>c.id===cid?{...c,color}:c)}));
+  render();
+}
+function addItem(cid,text){
+  if(!text || !text.trim()) return;
+  updateScenario(s=>({...s, categories:s.categories.map(c=>c.id===cid?{...c,items:[...c.items,text.trim()]}:c)}));
+  render();
+}
+function removeItem(cid,idx){
+  updateScenario(s=>({...s, categories:s.categories.map(c=>c.id===cid?{...c,items:c.items.filter((_,i)=>i!==idx)}:c)}));
+  render();
+}
+
+/* ---------- 匯出 / 匯入 ---------- */
+function exportData(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const d = new Date();
+  const stamp = d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
+  a.href = url;
+  a.download = "決策輪盤資料_"+stamp+".json";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  ui.toast = {type:"ok", msg:"已匯出，記得存到你的雲端資料夾"};
+  render();
+}
+function importDataFromFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!parsed || !Array.isArray(parsed.scenarios)) throw new Error("格式不對");
+      if(!window.confirm("匯入將覆蓋目前所有模板與紀錄，確定要匯入嗎？")) return;
+      state = parsed;
+      if(!state.activeScenarioId || !state.scenarios.find(s=>s.id===state.activeScenarioId)){
+        state.activeScenarioId = state.scenarios[0] ? state.scenarios[0].id : null;
+      }
+      if(!state.history) state.history = {};
+      saveData(); resetFlow();
+      ui.toast = {type:"ok", msg:"匯入成功"};
+      render();
+    }catch(e){
+      ui.toast = {type:"err", msg:"這個檔案讀不出來，請確認是本工具匯出的 JSON"};
+      render();
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- 輪盤轉動邏輯（直接操作 DOM 以維持 CSS 動畫） ---------- */
+function spinCategory(){
+  if(ui.catSpinning) return;
+  const cats = getCategories();
+  if(cats.length===0) return;
+  const idx = Math.floor(Math.random()*cats.length);
+  const segAngle = 360/cats.length;
+  const center = idx*segAngle + segAngle/2;
+  const targetMod = (360-center+360)%360;
+  const currentMod = ((ui.catRotation%360)+360)%360;
+  const diff = (targetMod-currentMod+360)%360;
+  const spins = 5 + Math.floor(Math.random()*2);
+  const newRotation = ui.catRotation + spins*360 + diff;
+  ui.pendingCatIdx = idx;
+  ui.catSpinning = true;
+  ui.catRotation = newRotation;
+
+  const disc = document.getElementById("cat-disc");
+  const btn = document.getElementById("cat-spin-btn");
+  if(btn){ btn.disabled = true; btn.textContent = "🎯 轉動中…"; }
+  if(disc){
+    disc.style.transition = "transform 4.2s cubic-bezier(0.12,0.85,0.18,1)";
+    disc.style.transform = "rotate("+newRotation+"deg)";
+    disc.addEventListener("transitionend", onCatSpinEnd, {once:true});
+  }
+}
+function onCatSpinEnd(){
+  ui.catSpinning = false;
+  const cats = getCategories();
+  ui.chosenCatId = cats[ui.pendingCatIdx] ? cats[ui.pendingCatIdx].id : null;
+  ui.pendingCatIdx = null;
+  ui.phase = "item";
+  render();
+}
+function spinItem(){
+  if(ui.itemSpinning) return;
+  const cat = getChosenCat();
+  if(!cat || cat.items.length===0) return;
+  const items = cat.items;
+  const idx = Math.floor(Math.random()*items.length);
+  const segAngle = 360/items.length;
+  const center = idx*segAngle + segAngle/2;
+  const targetMod = (360-center+360)%360;
+  const currentMod = ((ui.itemRotation%360)+360)%360;
+  const diff = (targetMod-currentMod+360)%360;
+  const spins = 5 + Math.floor(Math.random()*2);
+  const newRotation = ui.itemRotation + spins*360 + diff;
+  ui.pendingItemIdx = idx;
+  ui.itemSpinning = true;
+  ui.itemRotation = newRotation;
+
+  const disc = document.getElementById("item-disc");
+  const btn = document.getElementById("item-spin-btn");
+  if(btn){ btn.disabled = true; btn.textContent = "🎯 轉動中…"; }
+  if(disc){
+    disc.style.transition = "transform 4.2s cubic-bezier(0.12,0.85,0.18,1)";
+    disc.style.transform = "rotate("+newRotation+"deg)";
+    disc.addEventListener("transitionend", onItemSpinEnd, {once:true});
+  }
+}
+function onItemSpinEnd(){
+  ui.itemSpinning = false;
+  const cat = getChosenCat();
+  const result = cat.items[ui.pendingItemIdx];
+  ui.chosenItem = result;
+  ui.pendingItemIdx = null;
+  ui.phase = "result";
+  const sid = getScenario().id;
+  if(!state.history) state.history = {};
+  const list = [{cat:cat.name, item:result, t:Date.now()}, ...(state.history[sid]||[])].slice(0,12);
+  state.history[sid] = list;
+  saveData();
+  render();
+}
+
+/* ---------- 畫輪盤（回傳 HTML 字串） ---------- */
+function renderWheelHtml(segments, size, idPrefix){
+  const n = segments.length;
+  const segAngle = 360/n;
+  const gradient = segments.map((s,i)=> s.color+" "+(i*segAngle)+"deg "+((i+1)*segAngle)+"deg").join(", ");
+  const radius = size/2;
+  const fontSize = n>8?12:(n>5?14:16);
+  let labels = "";
+  segments.forEach((s,i)=>{
+    const center = i*segAngle + segAngle/2;
+    const flip = center>90 && center<270 ? 180 : 0;
+    labels += '<div class="disc-label" style="transform:rotate('+center+'deg)">'
+      + '<span style="left:'+(-radius*0.42)+'px; top:'+(-radius+22)+'px; width:'+(radius*0.84)+'px; font-size:'+fontSize+'px; transform:rotate('+flip+'deg)">'
+      + escapeHtml(s.label) + '</span></div>';
+  });
+  return '<div class="wheel-box">'
+    + '<div class="pointer"></div>'
+    + '<div class="disc" id="'+idPrefix+'-disc" style="background:conic-gradient(from 0deg, '+gradient+'); transform:rotate(0deg);">'+labels+'</div>'
+    + '<div class="pin"></div>'
+    + '</div>';
+}
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ---------- 主渲染 ---------- */
+function render(){
+  const app = document.getElementById("app");
+  const scenario = getScenario();
+  const categories = getCategories();
+  const chosenCat = getChosenCat();
+  const history = (state.history && state.history[scenario.id]) || [];
+
+  let html = "";
+
+  // Header
+  html += '<div class="header">'
+    + '<div><p class="eyebrow">籤筒決策輪盤 · 本機離線版</p><h1>選一個，就別再猶豫</h1></div>'
+    + '<button class="btn-edit'+(ui.editing?" active":"")+'" id="toggle-edit">✎ '+(ui.editing?"完成編輯":"編輯內容")+'</button>'
+    + '</div>';
+
+  // 模板選擇
+  html += '<div class="picker">'
+    + '<button class="picker-btn" id="picker-toggle">套用模板：<b>'+escapeHtml(scenario.name)+'</b> <span class="sym">'+(ui.scenarioPickerOpen?"▲":"▾")+'</span></button>';
+  if(ui.scenarioPickerOpen){
+    html += '<div class="picker-list">';
+    state.scenarios.forEach(s=>{
+      html += '<div class="picker-row'+(s.id===scenario.id?" active":"")+'" data-select-scenario="'+s.id+'">'
+        + '<span>'+escapeHtml(s.name)+'</span>'
+        + (state.scenarios.length>1 ? '<span class="icon-btn" data-delete-scenario="'+s.id+'">🗑</span>' : '')
+        + '</div>';
+    });
+    html += '<button class="picker-add" id="add-scenario">＋ 新增模板</button></div>';
+  }
+  html += '</div>';
+
+  // 編輯面板
+  if(ui.editing){
+    html += '<div class="edit-panel">';
+    if(ui.editingScenarioName){
+      html += '<input class="scenario-name-input" id="scenario-name-input" value="'+escapeHtml(scenario.name)+'" autofocus />';
+    }else{
+      html += '<div class="scenario-name-row" id="scenario-name-display">'+escapeHtml(scenario.name)+' <span class="sym">✎</span></div>';
+    }
+    categories.forEach(c=>{
+      html += '<div class="cat-card" style="border-color:'+c.color+'">'
+        + '<div class="cat-top">'
+        + '<div class="swatch-row">'
+        + COLOR_POOL.map(col=>'<span class="swatch" data-recolor="'+c.id+'" data-color="'+col+'" style="background:'+col+'; border-color:'+(col===c.color?"var(--ink)":"transparent")+'"></span>').join("")
+        + '</div>'
+        + '<input class="cat-name-input" style="border-color:'+c.color+'" data-rename-cat="'+c.id+'" value="'+escapeHtml(c.name)+'" />'
+        + '<button class="icon-btn" data-remove-cat="'+c.id+'">🗑</button>'
+        + '</div>'
+        + '<div>'
+        + c.items.map((it,i)=>'<span class="item-chip" style="background:'+c.color+'">'+escapeHtml(it)+' <span class="x" data-remove-item="'+c.id+'" data-item-idx="'+i+'">✕</span></span>').join("")
+        + '</div>'
+        + '<div class="adder">'
+        + '<input type="text" placeholder="新增細項…" data-add-item-input="'+c.id+'" />'
+        + '<button style="background:'+c.color+'" data-add-item-btn="'+c.id+'">＋</button>'
+        + '</div>'
+        + '</div>';
+    });
+    html += '<button class="add-cat-btn" id="add-category">＋ 新增類別</button>';
+    html += '</div>';
+  }
+
+  // 主流程
+  if(!ui.editing){
+    html += '<div class="flow">';
+    if(ui.phase!=="result"){
+      html += '<p class="flow-note">'+(ui.phase==="category" ? "第一輪：先轉出類別" : "第二輪：從「"+escapeHtml(chosenCat?chosenCat.name:"")+"」抽細項") +'</p>';
+    }
+    if(ui.phase==="category"){
+      if(categories.length>0){
+        const segs = categories.map(c=>({label:c.name,color:c.color}));
+        html += renderWheelHtml(segs,270,"cat");
+        html += '<button class="spin-btn" id="cat-spin-btn" style="background:var(--stamp)" '+(ui.catSpinning?"disabled":"")+'>✨ '+(ui.catSpinning?"轉動中…":"轉動類別輪盤")+'</button>';
+      }else{
+        html += '<p class="empty-note">這個模板還沒有類別，點右上「編輯內容」新增吧。</p>';
+      }
+    }else if(ui.phase==="item" && chosenCat){
+      if(chosenCat.items.length>0){
+        const segs = chosenCat.items.map(it=>({label:it,color:chosenCat.color}));
+        html += renderWheelHtml(segs,270,"item");
+        html += '<button class="spin-btn" id="item-spin-btn" style="background:'+chosenCat.color+'" '+(ui.itemSpinning?"disabled":"")+'>✨ '+(ui.itemSpinning?"轉動中…":"抽選「"+escapeHtml(chosenCat.name)+"」細項")+'</button>';
+      }else{
+        html += '<p class="empty-note">「'+escapeHtml(chosenCat.name)+'」底下還沒有細項可抽。</p>';
+      }
+      html += '<button class="link-btn" id="back-to-cat">回到類別重轉</button>';
+    }else if(ui.phase==="result" && chosenCat && ui.chosenItem){
+      html += '<div class="result-card" style="border-color:'+chosenCat.color+'">'
+        + '<p class="result-eyebrow">'+escapeHtml(scenario.name)+' · '+escapeHtml(chosenCat.name)+'</p>'
+        + '<p class="result-text" style="color:'+chosenCat.color+'">'+escapeHtml(ui.chosenItem)+'</p>'
+        + '</div>'
+        + '<button class="again-btn" id="spin-again">↺ 再抽一次</button>';
+    }
+    html += '</div>';
+
+    if(history.length>0){
+      html += '<div class="history-section"><p class="history-title">「'+escapeHtml(scenario.name)+'」最近的抽選紀錄</p><div>'
+        + history.map(h=>'<span class="history-chip">'+escapeHtml(h.cat)+' · '+escapeHtml(h.item)+'</span>').join("")
+        + '</div></div>';
+    }
+  }
+
+  // 匯出 / 匯入
+  html += '<div class="io-bar">'
+    + '<button class="io-btn" id="export-btn">⬇ 匯出資料</button>'
+    + '<button class="io-btn" id="import-btn">⬆ 匯入資料</button>'
+    + '</div>';
+
+  if(ui.toast){
+    html += '<p class="toast '+(ui.toast.type==="ok"?"ok":"")+'">'+escapeHtml(ui.toast.msg)+'</p>';
+  }
+
+  app.innerHTML = html;
+  attachEvents();
+}
+
+/* ---------- 綁定事件（每次 render 後重新綁定） ---------- */
+function attachEvents(){
+  const $ = (sel)=>document.querySelector(sel);
+  const on = (sel, ev, fn) => { const el=$(sel); if(el) el.addEventListener(ev, fn); };
+
+  on("#toggle-edit","click",()=>{ ui.editing=!ui.editing; ui.scenarioPickerOpen=false; render(); });
+  on("#picker-toggle","click",()=>{ ui.scenarioPickerOpen=!ui.scenarioPickerOpen; render(); });
+  on("#add-scenario","click",addScenario);
+
+  document.querySelectorAll("[data-select-scenario]").forEach(el=>{
+    el.addEventListener("click",()=>{
+      state.activeScenarioId = el.getAttribute("data-select-scenario");
+      saveData(); ui.scenarioPickerOpen=false; resetFlow(); render();
+    });
+  });
+  document.querySelectorAll("[data-delete-scenario]").forEach(el=>{
+    el.addEventListener("click",(e)=>{ e.stopPropagation(); deleteScenario(el.getAttribute("data-delete-scenario")); });
+  });
+
+  on("#scenario-name-display","click",()=>{ ui.editingScenarioName=true; render(); });
+  const nameInput = $("#scenario-name-input");
+  if(nameInput){
+    nameInput.focus();
+    const commit = ()=>{ renameScenario(nameInput.value); ui.editingScenarioName=false; render(); };
+    nameInput.addEventListener("blur", commit);
+    nameInput.addEventListener("keydown", e=>{ if(e.key==="Enter") commit(); });
+  }
+
+  on("#add-category","click",addCategory);
+  document.querySelectorAll("[data-recolor]").forEach(el=>{
+    el.addEventListener("click",()=>recolorCategory(el.getAttribute("data-recolor"), el.getAttribute("data-color")));
+  });
+  document.querySelectorAll("[data-remove-cat]").forEach(el=>{
+    el.addEventListener("click",()=>removeCategory(el.getAttribute("data-remove-cat")));
+  });
+  document.querySelectorAll("[data-rename-cat]").forEach(el=>{
+    el.addEventListener("blur",()=>renameCategory(el.getAttribute("data-rename-cat"), el.value));
+    el.addEventListener("keydown",e=>{ if(e.key==="Enter") e.target.blur(); });
+  });
+  document.querySelectorAll("[data-remove-item]").forEach(el=>{
+    el.addEventListener("click",()=>removeItem(el.getAttribute("data-remove-item"), parseInt(el.getAttribute("data-item-idx"),10)));
+  });
+  document.querySelectorAll("[data-add-item-btn]").forEach(el=>{
+    const cid = el.getAttribute("data-add-item-btn");
+    const input = document.querySelector('[data-add-item-input="'+cid+'"]');
+    const submit = ()=>{ addItem(cid, input.value); if(input) input.value=""; };
+    el.addEventListener("click",submit);
+    if(input) input.addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
+  });
+
+  on("#cat-spin-btn","click",spinCategory);
+  on("#item-spin-btn","click",spinItem);
+  on("#back-to-cat","click",()=>{ resetFlow(); render(); });
+  on("#spin-again","click",()=>{ resetFlow(); render(); });
+
+  on("#export-btn","click",exportData);
+  on("#import-btn","click",()=>document.getElementById("import-input").click());
+}
+
+document.getElementById("import-input").addEventListener("change", (e)=>{
+  const file = e.target.files[0];
+  if(file) importDataFromFile(file);
+  e.target.value = "";
+});
+
+render();
+</script>
+</body>
+</html>
